@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>India Healthcare Intelligence</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, sans-serif; background:#f4f6f9; }
+    header { background:#1a73e8; color:white; padding:14px 20px; font-size:18px; font-weight:bold; }
+    .stats-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:10px; background:white; border-bottom:1px solid #eee; }
+    .stat { background:#f8f9fa; border-radius:8px; padding:10px; text-align:center; }
+    .stat .val { font-size:22px; font-weight:bold; color:#1a73e8; }
+    .stat .lbl { font-size:11px; color:#666; margin-top:2px; }
+    .layout { display:flex; height:calc(100vh - 110px); }
+    .sidebar { width:380px; background:white; border-right:1px solid #eee; display:flex; flex-direction:column; }
+    .search-box { padding:12px; border-bottom:1px solid #eee; }
+    .search-box input { width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:13px; margin-bottom:8px; }
+    .search-box button { width:100%; padding:10px; background:#1a73e8; color:white; border:none; border-radius:8px; font-size:14px; cursor:pointer; }
+    .results { flex:1; overflow-y:auto; padding:8px; }
+    .card { background:white; border:1px solid #eee; border-radius:10px; padding:12px; margin-bottom:8px; cursor:pointer; }
+    .card:hover { border-color:#1a73e8; background:#f0f4ff; }
+    .card-name { font-weight:bold; font-size:14px; margin-bottom:3px; }
+    .card-loc { font-size:12px; color:#666; margin-bottom:8px; }
+    .tags { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
+    .tag { font-size:10px; padding:2px 7px; border-radius:10px; background:#e8f5e9; color:#2e7d32; }
+    .trust-row { display:flex; align-items:center; gap:8px; }
+    .trust-bg { flex:1; height:5px; background:#eee; border-radius:3px; }
+    .trust-fill { height:5px; border-radius:3px; }
+    .trust-text { font-size:11px; font-weight:bold; }
+    .high { background:#4caf50; } .t-high { color:#2e7d32; }
+    .med  { background:#ff9800; } .t-med  { color:#e65100; }
+    .low  { background:#f44336; } .t-low  { color:#b71c1c; }
+    .flags { margin-top:6px; font-size:11px; color:#c62828; background:#ffebee; padding:5px 8px; border-radius:6px; }
+    .citation { margin-top:4px; font-size:10px; color:#1a73e8; background:#e8f0fe; padding:4px 8px; border-radius:6px; }
+    .validation { margin-top:4px; font-size:10px; color:#2e7d32; background:#e8f5e9; padding:4px 8px; border-radius:6px; }
+    .validation.invalid { color:#c62828; background:#ffebee; }
+    #map { flex:1; }
+    .loading { text-align:center; padding:30px; color:#999; font-size:13px; }
+    .reasoning { font-size:11px; color:#1a73e8; background:#e8f0fe; padding:6px 10px; border-radius:6px; margin-bottom:8px; }
+  </style>
+</head>
+<body>
+<header>🏥 India Healthcare Intelligence System</header>
+<div class="stats-bar">
+  <div class="stat"><div class="val" id="s-total">—</div><div class="lbl">Total Facilities</div></div>
+  <div class="stat"><div class="val" id="s-states">—</div><div class="lbl">States</div></div>
+  <div class="stat"><div class="val" id="s-districts">—</div><div class="lbl">Districts</div></div>
+  <div class="stat"><div class="val" id="s-results">0</div><div class="lbl">Search Results</div></div>
+</div>
+<div class="layout">
+  <div class="sidebar">
+    <div class="search-box">
+      <input id="queryInput" type="text"
+        placeholder="e.g. ICU emergency surgery Bihar"
+        onkeydown="if(event.key==='Enter') search()"/>
+      <button onclick="search()">Search Facilities</button>
+    </div>
+    <div class="results" id="results">
+      <p class="loading">Enter a query to find hospitals.</p>
+    </div>
+  </div>
+  <div id="map"></div>
+</div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+const API = "http://127.0.0.1:5000";
+const map = L.map("map").setView([22.5, 82.0], 5);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+let markers = [];
+
+fetch(`${API}/stats`).then(r=>r.json()).then(d=>{
+  document.getElementById("s-total").textContent = d.total.toLocaleString();
+  document.getElementById("s-states").textContent = d.states;
+  document.getElementById("s-districts").textContent = d.districts;
+}).catch(()=>{});
+
+function clearMarkers(){ markers.forEach(m=>map.removeLayer(m)); markers=[]; }
+
+function getCaps(caps){
+  const m={
+    "has_icu":"ICU",
+    "has_surgery":"Surgery",
+    "has_emergency":"Emergency",
+    "has_dialysis":"Dialysis",
+    "has_oncology":"Oncology",
+    "has_neonatal":"Neonatal",
+    "available_24_7":"24/7",
+    "oxygen_supply":"Oxygen"
+  };
+  return Object.entries(m).filter(([k])=>caps[k]===true).map(([,v])=>v);
+}
+
+async function search(){
+  const query = document.getElementById("queryInput").value.trim();
+  if(!query) return;
+  document.getElementById("results").innerHTML='<p class="loading">Searching with AI...</p>';
+  clearMarkers();
+  try{
+    const res = await fetch(`${API}/search?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    document.getElementById("s-results").textContent = data.length;
+    if(!data.length){
+      document.getElementById("results").innerHTML='<p class="loading">No results found.</p>';
+      return;
+    }
+
+    let html="";
+
+    if(data[0].reasoning){
+      html+=`<div class="reasoning">🤖 AI understood: ${data[0].reasoning}</div>`;
+    }
+
+    data.forEach((f,i)=>{
+      const caps = getCaps(f.capabilities);
+      const t = f.trust;
+      const v = f.validation;
+      const color = t.level==="High"?"high":t.level==="Medium"?"med":"low";
+      const tcolor = t.level==="High"?"t-high":t.level==="Medium"?"t-med":"t-low";
+
+      const flagHtml = t.flags && t.flags.length
+        ? `<div class="flags">⚠️ ${t.flags[0]}</div>` : "";
+
+      const citationHtml = t.citations && t.citations.length
+        ? `<div class="citation">
+            📋 Rule: ${t.citations[0].rule}<br>
+            🔍 Finding: ${t.citations[0].finding}<br>
+            📉 Impact: ${t.citations[0].impact}
+           </div>` : "";
+
+      const validationHtml = v
+        ? `<div class="validation ${v.is_valid ? '' : 'invalid'}">
+            ${v.is_valid ? '✅ Validated' : '❌ Issues found'}: 
+            ${v.issues && v.issues.length ? v.issues[0] : 'Data consistent'}
+           </div>` : "";
+
+      html+=`
+        <div class="card" onclick="focusCard(${f.lat},${f.lng},${i})">
+          <div class="card-name">${f.name}</div>
+          <div class="card-loc">📍 ${f.district}, ${f.state} — ${f.pincode}</div>
+          <div class="tags">
+            ${caps.map(c=>`<span class="tag">${c}</span>`).join("")}
+          </div>
+          <div class="trust-row">
+            <div class="trust-bg">
+              <div class="trust-fill ${color}" style="width:${t.score}%"></div>
+            </div>
+            <span class="trust-text ${tcolor}">${t.level} ${t.score}/100</span>
+          </div>
+          ${flagHtml}
+          ${citationHtml}
+          ${validationHtml}
+        </div>`;
+
+      if(f.lat && f.lng){
+        const dotColor = t.level==="High"?"#4caf50":t.level==="Medium"?"#ff9800":"#f44336";
+        const marker = L.circleMarker([f.lat,f.lng],{
+          color:dotColor, radius:9, fillOpacity:0.85
+        }).addTo(map);
+        marker.bindPopup(`
+          <b>${f.name}</b><br>
+          ${f.district}, ${f.state}<br>
+          Trust: ${t.level} (${t.score}/100)<br>
+          ${caps.join(", ")}
+        `);
+        markers.push(marker);
+      }
+    });
+
+    document.getElementById("results").innerHTML = html;
+
+  }catch(e){
+    document.getElementById("results").innerHTML=
+      '<p class="loading">Error — is backend running?</p>';
+  }
+}
+
+function focusCard(lat,lng,i){
+  if(lat&&lng) map.setView([lat,lng],11);
+}
+</script>
+</body>
+</html>
