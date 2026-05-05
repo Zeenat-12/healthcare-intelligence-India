@@ -29,10 +29,25 @@ Query: "{user_query}"
 def smart_search(user_query, df):
     filters = understand_query(user_query)
     results = df.copy()
+
     location = filters.get("location", "")
     if location:
-        results = results[
+        location_mask = (
             results["state"].str.lower().str.contains(location.lower(), na=False) |
-            results["district"].str.lower().str.contains(location.lower(), na=False)
-        ]
-    return results.head(10), filters
+            results["district"].str.lower().str.contains(location.lower(), na=False) |
+            results["pincode"].str.contains(location, na=False)
+        )
+        location_results = results[location_mask]
+        if len(location_results) > 0:
+            results = location_results
+
+    query_words = user_query.lower().split()
+    def row_matches(row):
+        row_text = " ".join(str(v).lower() for v in row.values)
+        return any(word in row_text for word in query_words)
+
+    keyword_results = results[results.apply(row_matches, axis=1)]
+    if len(keyword_results) > 0:
+        results = keyword_results
+
+    return results.head(200), filters
