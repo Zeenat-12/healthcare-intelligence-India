@@ -1,35 +1,8 @@
-from google import genai
-import json
-
-GEMINI_KEY = "AIzaSyCfHQcMt4o4qoz3ePrxO_-wZbXSPyyZJkQ"
-client = genai.Client(api_key=GEMINI_KEY)
-
-def understand_query(user_query):
-    prompt = f"""Break down this hospital search query into filters.
-Return ONLY valid JSON no extra text:
-{{
-  "required_capabilities": [],
-  "location": "",
-  "doctor_preference": "any",
-  "reasoning": ""
-}}
-Query: "{user_query}"
-"""
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt
-        )
-        raw = response.text.strip()
-        clean = raw.replace("```json","").replace("```","").strip()
-        return json.loads(clean)
-    except:
-        return {}
-
 def smart_search(user_query, df):
     filters = understand_query(user_query)
     results = df.copy()
 
+    # Step 1 — Apply location filter FIRST
     location = filters.get("location", "")
     if location:
         location_mask = (
@@ -39,15 +12,16 @@ def smart_search(user_query, df):
         )
         location_results = results[location_mask]
         if len(location_results) > 0:
-            results = location_results
+            results = location_results  # Only use location filtered results
 
-    query_words = user_query.lower().split()
-    def row_matches(row):
-        row_text = " ".join(str(v).lower() for v in row.values)
-        return any(word in row_text for word in query_words)
-
-    keyword_results = results[results.apply(row_matches, axis=1)]
-    if len(keyword_results) > 0:
-        results = keyword_results
+    # Step 2 — Apply capability filter WITHIN location results
+    required_caps = filters.get("required_capabilities", [])
+    if required_caps:
+        def has_capability(row):
+            row_text = " ".join(str(v).lower() for v in row.values)
+            return any(cap.lower() in row_text for cap in required_caps)
+        cap_results = results[results.apply(has_capability, axis=1)]
+        if len(cap_results) > 0:
+            results = cap_results
 
     return results.head(200), filters
