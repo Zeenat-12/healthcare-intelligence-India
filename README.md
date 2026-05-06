@@ -164,11 +164,11 @@ The code editor used to write all Python, HTML, CSS, and JavaScript files. Exten
 #### **PowerShell**
 The Windows terminal used to run all commands — starting the Flask server (`python app.py`), installing libraries (`pip install`), and pushing code to GitHub (`git push`).
 
----
 
 ## 📁 Project Structure
+
+```
 healthcare-intelligence-India/
-'''
 │
 ├── backend/
 │   ├── app.py              # Flask API server
@@ -184,8 +184,8 @@ healthcare-intelligence-India/
 ├── .env                    # API keys (not pushed to GitHub)
 ├── requirements.txt        # Python dependencies
 └── README.md
-'''
----
+```
+
 
 ## 🚀 Getting Started
 
