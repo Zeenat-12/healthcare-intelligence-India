@@ -17,39 +17,6 @@ A smart AI-powered system to search and analyze 10,000+ medical facilities acros
 - **Data:** Pandas, OpenPyXL
 - **Dataset:** 10,000 Indian medical facilities
 
-## ⚙️ How To Run
-
-### 1. Clone the repository
-```bash
-git clone https://github.com/Zeenat-12/healthcare-intelligence-India.git
-cd healthcare-intelligence-India
-```
-
-### 2. Install dependencies
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-### 3. Add your API key
-Create a `.env` file in the root folder:
-GEMINI_API_KEY=your_api_key_here
-
-### 4. Run the backend
-```bash
-cd backend
-python app.py
-```
-
-### 5. Open the frontend
-Open `frontend/index.html` in your browser.
-
-## 🔍 How To Search
-Type queries like:
-- `ICU emergency Bihar`
-- `Surgery dialysis Mumbai`
-- `24/7 oxygen supply Delhi`
-
 ## 📊 Features
 - ✅ 10,000 facilities loaded
 - ✅ 200 results per search
@@ -102,7 +69,12 @@ Step 6 — Results shown on map
 200 results appear on an interactive map of India with color coded dots — green for high trust, orange for medium, red for low.
 
 Key Features
-FeatureDescription🔍 Smart SearchAI understands natural language queries🗺️ Interactive MapSee all hospitals on India map⭐ Trust ScoringFlags hospitals with suspicious claims✅ Validator AgentDouble checks AI extracted data📊 10,000 FacilitiesCovers hospitals across all of India200 ResultsShows up to 200 hospitals per search
+
+🔍 Smart SearchAI understands natural language queries
+🗺️ Interactive MapSee all hospitals on India map
+⭐ Trust ScoringFlags hospitals with suspicious claims
+✅ Validator AgentDouble checks AI extracted data
+📊 10,000 FacilitiesCovers hospitals across all of India200 ResultsShows up to 200 hospitals per search
 
 Tech Used and Libraries 
 
@@ -127,7 +99,6 @@ Git — Tracks and manages all code changes.
 GitHub — Hosts the project code online for team collaboration.
 VS Code — Code editor used to write the entire project.
 PowerShell — Terminal used to run Python and Git commands.
-
 
 Real World Impact
 
