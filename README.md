@@ -27,7 +27,9 @@ A smart AI-powered system to search and analyze 10,000+ medical facilities acros
 
 
 ## 📁 Project Structure
+
 healthcare-intelligence-India/
+│
 ├── backend/
 │   ├── app.py
 │   ├── data_loader.py
@@ -36,9 +38,11 @@ healthcare-intelligence-India/
 │   ├── trust_scorer.py
 │   ├── validator.py
 │   └── VF_Hackathon_Dataset_India_Large.xlsx
+│
 ├── frontend/
 │   ├── index.html
 │   └── requirements.txt
+│
 ├── .env
 └── README.md
 
