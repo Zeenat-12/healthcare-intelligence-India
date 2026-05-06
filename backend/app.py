@@ -4,14 +4,37 @@ from data_loader import load_data
 from extractor import extract_from_notes
 from trust_scorer import calculate_trust_score
 from search_agent import smart_search
-from validator import validate_extraction
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins="*", allow_headers="*", methods=["GET", "POST", "OPTIONS"])
 
 print("Loading data...")
 df = load_data()
 print("Ready!")
+
+CAPABILITY_KEYWORDS = {
+    "has_icu": ["icu", "intensive care", "critical care"],
+    "has_surgery": ["surgery", "surgical", "operation theatre", "ot "],
+    "has_emergency": ["emergency", "casualty", "trauma"],
+    "has_dialysis": ["dialysis", "nephrology", "kidney"],
+    "has_oncology": ["oncology", "cancer", "chemotherapy"],
+    "has_neonatal": ["neonatal", "nicu", "newborn", "paediatric"],
+    "available_24_7": ["24/7", "24 hours", "round the clock", "always open"],
+    "oxygen_supply": ["oxygen", "ventilator", "respiratory"],
+    "has_anesthesiologist": ["anaesthesia", "anesthesia", "anesthesiologist"],
+    "renovation_or_closed": ["closed", "renovation", "not operational", "shut"]
+}
+
+def fast_extract(notes_text):
+    notes_lower = notes_text.lower()
+    result = {}
+    for cap, keywords in CAPABILITY_KEYWORDS.items():
+        result[cap] = any(kw in notes_lower for kw in keywords)
+    result["doctor_type"] = "fulltime" if any(
+        w in notes_lower for w in ["fulltime", "full time", "full-time", "resident"]
+    ) else "parttime"
+    result["summary"] = notes_text[:120] + "..." if len(notes_text) > 120 else notes_text
+    return result
 
 @app.route("/search", methods=["GET"])
 def search():
@@ -20,26 +43,29 @@ def search():
         return jsonify({"error": "No query"}), 400
 
     results, filters = smart_search(query, df)
-    results = results.head(200)
+    results = results.head(50)
     output = []
 
-    for _, row in results.iterrows():
-        notes = str(row.get("notes", ""))
-        if str(row.get("description", "")) != "nan":
-            notes = str(row.get("description", ""))
-        if str(row.get("specialties", "")) != "nan":
-            notes += " " + str(row.get("specialties", ""))
-        if str(row.get("equipment", "")) != "nan":
-            notes += " " + str(row.get("equipment", ""))
-        if str(row.get("procedure", "")) != "nan":
-            notes += " " + str(row.get("procedure", ""))
-        if str(row.get("capability", "")) != "nan":
-            notes += " " + str(row.get("capability", ""))
+    for i, (_, row) in enumerate(results.iterrows()):
+        parts = []
+        for col in ["description", "specialties", "equipment", "procedure", "capability", "notes"]:
+            val = str(row.get(col, ""))
+            if val and val.lower() != "nan":
+                parts.append(val)
+        notes = " ".join(parts).strip()
 
-        extracted = extract_from_notes(notes, row.get("facility_name", ""))
+        if i < 20 and notes:
+            name = str(row.get("facility_name", ""))[:30]
+            print("[Gemini] Extracting #" + str(i+1) + ": " + name)
+            extracted = extract_from_notes(notes, str(row.get("facility_name", "")))
+            if not extracted:
+                print("[Fallback] Using keyword extraction for #" + str(i+1))
+                extracted = fast_extract(notes)
+        else:
+            extracted = fast_extract(notes) if notes else {}
+
         trust = calculate_trust_score(extracted)
 
-        # Skipping heavy Gemini validation to keep 200 results fast
         validation = {
             "issues": [],
             "corrections": {},

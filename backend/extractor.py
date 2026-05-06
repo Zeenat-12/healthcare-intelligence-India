@@ -8,7 +8,11 @@ client = genai.Client(api_key=GEMINI_KEY)
 
 def extract_from_notes(notes_text, facility_name=""):
     if not notes_text or notes_text.strip() == "":
+        print(f"Skipping (empty notes): {facility_name[:30]}")
         return {}
+
+    print(f"Extracting for: {facility_name[:30]}")
+
     prompt = f"""Read these hospital notes and return ONLY a JSON object. No extra text.
 {{
   "has_icu": true,
@@ -30,7 +34,9 @@ Notes: {notes_text}
             contents=prompt
         )
         raw = response.text.strip()
-        clean = raw.replace("```json","").replace("```","").strip()
+        print(f"Gemini response: {raw[:100]}")
+        clean = raw.replace("```json", "").replace("```", "").strip()
         return json.loads(clean)
-    except:
+    except Exception as e:
+        print(f"Gemini error for {facility_name[:30]}: {e}")
         return {}
