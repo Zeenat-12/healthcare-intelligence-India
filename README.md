@@ -28,6 +28,7 @@ A smart AI-powered system to search and analyze 10,000+ medical facilities acros
 
 ## 📁 Project Structure
 
+```
 healthcare-intelligence-India/
 │
 ├── backend/
@@ -45,6 +46,7 @@ healthcare-intelligence-India/
 │
 ├── .env
 └── README.md
+```
 
 
 This is an AI-powered web application that helps people find the right hospital or medical facility across India. Instead of just searching by name, it uses Artificial Intelligence to understand what a hospital can actually do.
