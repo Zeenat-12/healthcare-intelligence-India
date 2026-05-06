@@ -64,7 +64,7 @@
 </div>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-const API = "http://127.0.0.1:5000";
+const API = "http://localhost:5000";
 const map = L.map("map").setView([22.5, 82.0], 5);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 let markers = [];
@@ -94,7 +94,8 @@ function getCaps(caps){
 async function search(){
   const query = document.getElementById("queryInput").value.trim();
   if(!query) return;
-  document.getElementById("results").innerHTML='<p class="loading">Searching with AI...</p>';
+  document.getElementById("results").innerHTML=
+    '<p class="loading">⏳ Searching 200 facilities with AI... this may take 30–60 seconds.</p>';
   clearMarkers();
   try{
     const res = await fetch(`${API}/search?q=${encodeURIComponent(query)}`);
@@ -130,7 +131,7 @@ async function search(){
 
       const validationHtml = v
         ? `<div class="validation ${v.is_valid ? '' : 'invalid'}">
-            ${v.is_valid ? '✅ Validated' : '❌ Issues found'}: 
+            ${v.is_valid ? '✅ Validated' : '❌ Issues found'}:
             ${v.issues && v.issues.length ? v.issues[0] : 'Data consistent'}
            </div>` : "";
 
