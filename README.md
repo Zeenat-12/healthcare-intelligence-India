@@ -168,7 +168,7 @@ The Windows terminal used to run all commands — starting the Flask server (`py
 
 ## 📁 Project Structure
 healthcare-intelligence-India/
-
+'''
 │
 ├── backend/
 │   ├── app.py              # Flask API server
@@ -184,7 +184,7 @@ healthcare-intelligence-India/
 ├── .env                    # API keys (not pushed to GitHub)
 ├── requirements.txt        # Python dependencies
 └── README.md
-
+'''
 ---
 
 ## 🚀 Getting Started
